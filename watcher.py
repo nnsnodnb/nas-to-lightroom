@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -13,7 +14,7 @@ class EventHandler(FileSystemEventHandler):
     catalog_id: str | None = None
     album_id: str | None = None
 
-    def __init__(self) -> None:
+    def __init__(self, album_name: str) -> None:
         self.lightroom = LightroomAPI(
             client_id=os.environ["CLIENT_ID"],
             client_secret=os.environ["CLIENT_SECRET"],
@@ -22,7 +23,7 @@ class EventHandler(FileSystemEventHandler):
         self.catalog_id = self.lightroom.get_catalog()
         albums = self.lightroom.list_albums(self.catalog_id)
         for obj in albums:
-            if obj["type"] == "album" and obj["payload"]["name"] == "2025_04_phpcon_odawara":
+            if obj["type"] == "album" and obj["payload"]["name"] == album_name:
                 self.album_id = obj["id"]
                 break
         else:
@@ -40,13 +41,11 @@ class EventHandler(FileSystemEventHandler):
         self.lightroom.add_asset_to_album(self.catalog_id, self.album_id, asset_id)
 
 
-def watch() -> None:
-    watch_path = Path("/") / "Users" / "nnsnodnb" / "Pictures" / "nas"
+def watch(watch_path: Path, album_name: str) -> None:
     if not watch_path.exists():
-        raise FileNotFoundError(f"File not found: {watch_path}")
+        raise FileNotFoundError(f"Directory is not found: {watch_path}")
 
-    event_handler = EventHandler()
-    # return
+    event_handler = EventHandler(album_name=album_name)
     observer = Observer()
     observer.schedule(event_handler, str(watch_path) + "/", recursive=False)
 
@@ -64,4 +63,4 @@ def watch() -> None:
 
 
 if __name__ == "__main__":
-    watch()
+    watch(Path(sys.argv[1]), sys.argv[2])
